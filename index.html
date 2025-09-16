@@ -1,73 +1,55 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Quiz — Образовательная платформа</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="container" aria-live="polite">
-      <header class="header">
-        <h1 id="quiz-title">Загрузка…</h1>
-        <div class="meta">
-          <div id="progress" aria-label="Прогресс теста">Вопрос — / —</div>
-          <div id="timer" aria-label="Оставшееся время">—:—</div>
-        </div>
-      </header>
 
-      <section
-        id="question-section"
-        class="card"
-        aria-labelledby="question-text"
-      >
-        <div id="question-text" class="question-text">Загрузка вопроса…</div>
-        <form
-          id="options-form"
-          class="options"
-          role="radiogroup"
-          aria-label="Варианты ответа"
-        ></form>
-      </section>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz — Образовательная платформа</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
 
-      <nav class="actions">
-        <button id="btn-prev" class="btn" type="button" aria-label="Назад">
-          Назад
+<body>
+  <main class="container" aria-live="polite">
+    <header class="header">
+      <h1 id="quiz-title">Загрузка…</h1>
+      <div class="meta">
+        <div id="progress" aria-label="Прогресс теста">Вопрос — / —</div>
+        <div id="timer" aria-label="Оставшееся время">—:—</div>
+      </div>
+    </header>
+
+    <section id="question-section" class="card" aria-labelledby="question-text">
+      <div id="question-text" class="question-text">Загрузка вопроса…</div>
+      <form id="options-form" class="options" role="radiogroup" aria-label="Варианты ответа"></form>
+    </section>
+
+    <nav class="actions">
+      <button id="btn-prev" class="btn" type="button" aria-label="Назад">
+        Назад
+      </button>
+      <button id="btn-next" class="btn btn-primary" type="button" aria-label="Далее" disabled>
+        Далее
+      </button>
+      <button id="btn-finish" class="btn btn-accent" type="button" aria-label="Завершить" disabled>
+        Завершить
+      </button>
+    </nav>
+
+    <section id="result-section" class="card hidden" aria-live="polite">
+      <h2>Результат</h2>
+      <p id="result-summary">—</p>
+      <div class="actions">
+        <button id="btn-review" class="btn" type="button">
+          Посмотреть ответы
         </button>
-        <button
-          id="btn-next"
-          class="btn btn-primary"
-          type="button"
-          aria-label="Далее"
-          disabled
-        >
-          Далее
+        <button id="btn-restart" class="btn btn-primary" type="button">
+          Пройти заново
         </button>
-        <button
-          id="btn-finish"
-          class="btn btn-accent"
-          type="button"
-          aria-label="Завершить"
-          disabled
-        >
-          Завершить
-        </button>
-      </nav>
+      </div>
+    </section>
+  </main>
 
-      <section id="result-section" class="card hidden" aria-live="polite">
-        <h2>Результат</h2>
-        <p id="result-summary">—</p>
-        <div class="actions">
-          <button id="btn-review" class="btn" type="button">
-            Посмотреть ответы
-          </button>
-          <button id="btn-restart" class="btn btn-primary" type="button">
-            Пройти заново
-          </button>
-        </div>
-      </section>
-    </main>
+  <script src="./app.js" type="module"></script>
+</body>
 
-    <script src="./app.js" type="module"></script>
-  </body>
 </html>

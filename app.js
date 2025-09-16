@@ -24,21 +24,24 @@ class Question {
 // ========== Сервисы ==========
 class StorageService {
   static saveState(state) {
-    // TODO: сериализовать state и сохранить в localStorage
-    // Пример: localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(state));
-    throw new Error("Not implemented: StorageService.saveState");
+    localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(state));
   }
 
   static loadState() {
-    // TODO: прочитать и распарсить состояние, вернуть объект или null
-    throw new Error("Not implemented: StorageService.loadState");
+    const raw = localStorage.getItem(STORAGE_KEYS.STATE);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   }
 
   static clear() {
-    // TODO: очистить сохранённое состояние
-    throw new Error("Not implemented: StorageService.clear");
+    localStorage.removeItem(STORAGE_KEYS.STATE);
   }
 }
+
 
 // ========== Движок теста ==========
 class QuizEngine {
@@ -50,7 +53,6 @@ class QuizEngine {
     this.questions = quiz.questions.map((q) => new Question(q));
 
     this.currentIndex = 0;
-    /** @type {Record<string, number|undefined>} */
     this.answers = {}; // questionId -> selectedIndex
     this.remainingSec = quiz.timeLimitSec;
     this.isFinished = false;
@@ -59,63 +61,85 @@ class QuizEngine {
   get length() {
     return this.questions.length;
   }
+
   get currentQuestion() {
     return this.questions[this.currentIndex];
   }
 
-  /** @param {number} index */
   goTo(index) {
-    // TODO: валидировать границы и сменить текущий индекс
-    throw new Error("Not implemented: QuizEngine.goTo");
+    if (index >= 0 && index < this.length) {
+      this.currentIndex = index;
+    }
   }
 
   next() {
-    // TODO: перейти к следующему вопросу, если возможно
-    throw new Error("Not implemented: QuizEngine.next");
+    if (this.currentIndex < this.length - 1) {
+      this.currentIndex++;
+    }
   }
 
   prev() {
-    // TODO: перейти к предыдущему вопросу, если возможно
-    throw new Error("Not implemented: QuizEngine.prev");
+    if (this.currentIndex > 0) {
+      this.currentIndex--;
+    }
   }
 
-  /** @param {number} optionIndex */
   select(optionIndex) {
-    // TODO: сохранить выбор пользователя для текущего вопроса
-    throw new Error("Not implemented: QuizEngine.select");
+    const q = this.currentQuestion;
+    this.answers[q.id] = optionIndex;
   }
 
   getSelectedIndex() {
-    // TODO: вернуть выбранный индекс для текущего вопроса (или undefined)
-    throw new Error("Not implemented: QuizEngine.getSelectedIndex");
+    const q = this.currentQuestion;
+    return this.answers[q.id];
   }
 
   tick() {
-    // TODO: декремент таймера; если 0 — завершить тест
-    throw new Error("Not implemented: QuizEngine.tick");
+    if (this.isFinished) return;
+    this.remainingSec--;
+    if (this.remainingSec <= 0) {
+      this.finish();
+    }
   }
 
   finish() {
-    // TODO: зафиксировать завершение и вернуть сводку результата
-    // return { correct: number, total: number, percent: number, passed: boolean }
-    throw new Error("Not implemented: QuizEngine.finish");
+    this.isFinished = true;
+    let correct = 0;
+    this.questions.forEach((q) => {
+      if (this.answers[q.id] === q.correctIndex) {
+        correct++;
+      }
+    });
+    const total = this.length;
+    const percent = correct / total;
+    const passed = percent >= this.passThreshold;
+    return { correct, total, percent, passed };
   }
 
-  /** Восстановление/выгрузка состояния для localStorage */
   toState() {
-    // TODO: вернуть сериализуемый снимок состояния
-    throw new Error("Not implemented: QuizEngine.toState");
+    return {
+      currentIndex: this.currentIndex,
+      answers: this.answers,
+      remainingSec: this.remainingSec,
+      isFinished: this.isFinished,
+    };
   }
 
-  /** @param {any} state */
   static fromState(quiz, state) {
-    // TODO: создать двигатель на базе сохранённого состояния
-    throw new Error("Not implemented: QuizEngine.fromState");
+    const engine = new QuizEngine(quiz);
+    engine.currentIndex = state.currentIndex ?? 0;
+    engine.answers = state.answers ?? {};
+    engine.remainingSec =
+      typeof state.remainingSec === "number"
+        ? state.remainingSec
+        : quiz.timeLimitSec;
+    engine.isFinished = !!state.isFinished;
+    return engine;
   }
 }
 
 // ========== DOM-утилиты ==========
-const $ = (sel) => /** @type {HTMLElement} */ (document.querySelector(sel));
+const $ = (sel) => /** @type {HTMLElement} */(document.querySelector(sel));
 const els = {
   title: $("#quiz-title"),
   progress: $("#progress"),
@@ -141,7 +165,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const quiz = await loadQuiz();
   els.title.textContent = quiz.title;
 
-  const saved = StorageService.loadState?.(); // заглушка
+  const saved = StorageService.loadState();
   if (saved) {
     engine = QuizEngine.fromState(quiz, saved);
   } else {
@@ -149,6 +173,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   bindEvents();
+
   renderAll();
 
   startTimer();
@@ -248,9 +273,8 @@ function renderAll() {
 }
 
 function renderProgress() {
-  els.progress.textContent = `Вопрос ${engine.currentIndex + 1} из ${
-    engine.length
-  }`;
+  els.progress.textContent = `Вопрос ${engine.currentIndex + 1} из ${engine.length
+    }`;
 }
 
 function renderTimer() {
@@ -269,15 +293,21 @@ function renderQuestion() {
   els.qText.textContent = q.text;
 
   els.form.innerHTML = "";
+  els.form.setAttribute("aria-labelledby", "question-text");
+
   q.options.forEach((opt, i) => {
     const id = `opt-${q.id}-${i}`;
+    const labelId = `${id}-label`;
     const wrapper = document.createElement("label");
     wrapper.className = "option";
+    wrapper.setAttribute("role", "radio");
+    wrapper.setAttribute("aria-checked", String(engine.getSelectedIndex?.() === i));
+    wrapper.setAttribute("tabindex", "0");
+
     if (reviewMode) {
       const chosen = engine.answers[q.id];
       if (i === q.correctIndex) wrapper.classList.add("correct");
-      if (chosen === i && i !== q.correctIndex)
-        wrapper.classList.add("incorrect");
+      if (chosen === i && i !== q.correctIndex) wrapper.classList.add("incorrect");
     }
 
     const input = document.createElement("input");
@@ -286,15 +316,47 @@ function renderQuestion() {
     input.value = String(i);
     input.id = id;
     input.checked = engine.getSelectedIndex?.() === i;
+    input.setAttribute("aria-labelledby", labelId);
 
     const span = document.createElement("span");
+    span.id = labelId;
     span.textContent = opt;
+
+    wrapper.addEventListener("click", (ev) => {
+      const id = i;
+      safeCall(() => engine.select(id));
+      persist();
+      renderNav();
+      Array.from(els.form.querySelectorAll("label.option")).forEach((lab, j) => {
+        lab.setAttribute("aria-checked", String(engine.getSelectedIndex?.() === j));
+      });
+    });
+
+    wrapper.addEventListener("keydown", (ev) => {
+      if (ev.key === " " || ev.key === "Enter") {
+        ev.preventDefault();
+        wrapper.click();
+      }
+    });
 
     wrapper.appendChild(input);
     wrapper.appendChild(span);
     els.form.appendChild(wrapper);
   });
+
+  window.requestAnimationFrame(() => {
+    const selected = els.form.querySelector('input[checked="checked"], input:checked');
+    if (selected) {
+      const lab = selected.closest("label.option");
+      if (lab) lab.focus();
+    } else {
+      const first = els.form.querySelector("label.option");
+      if (first) first.focus();
+    }
+  });
 }
+
+
 
 function renderNav() {
   const hasSelection = Number.isInteger(engine.getSelectedIndex?.());
@@ -323,3 +385,32 @@ function persist() {
     /* noop в шаблоне */
   }
 }
+
+// ========== Клавиатурная навигация для удобства и доступности ==========
+document.addEventListener("keydown", (e) => {
+  const active = document.activeElement;
+  const isInputLike = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+  if (isInputLike) return;
+
+  if (!engine || engine.isFinished) return;
+
+  if (e.key === "ArrowRight") {
+    const hasSelection = Number.isInteger(engine.getSelectedIndex?.());
+    if (engine.currentIndex < engine.length - 1 && hasSelection) {
+      safeCall(() => engine.next());
+      persist();
+      renderAll();
+    }
+  } else if (e.key === "ArrowLeft") {
+    if (engine.currentIndex > 0) {
+      safeCall(() => engine.prev());
+      persist();
+      renderAll();
+    }
+  } else if (e.key === "Enter" || e.key === " ") {
+    if (active && active.classList && active.classList.contains("option")) {
+      e.preventDefault();
+      active.click();
+    }
+  }
+});
